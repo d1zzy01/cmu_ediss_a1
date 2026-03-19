@@ -42,6 +42,7 @@ def populate_book_summary(isbn: str) -> None:
         if not book:
             return
         try:
+            # Summary failures should not break the book creation flow.
             book.summary = request_summary(book)
         except Exception as exc:
             logger.exception("Summary generation failed for ISBN %s: %s", isbn, exc)
