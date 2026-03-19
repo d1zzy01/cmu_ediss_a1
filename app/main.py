@@ -82,7 +82,7 @@ def create_book(
         genre=payload.genre,
         price=payload.price,
         quantity=payload.quantity,
-        summary=None,
+        summary="",
     )
     db.add(book)
     db.commit()
