@@ -3,10 +3,8 @@ from __future__ import annotations
 import logging
 
 from google import genai
-from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import SessionLocal
 from app.models import Book
 
 logger = logging.getLogger(__name__)
@@ -33,21 +31,3 @@ def request_summary(book: Book) -> str:
     )
     logger.info("Generated summary for ISBN %s", book.isbn)
     return response.text or ""
-
-
-def populate_book_summary(isbn: str) -> None:
-    db: Session = SessionLocal()
-    try:
-        book = db.get(Book, isbn)
-        if not book:
-            return
-        try:
-            # Summary failures should not break the book creation flow.
-            book.summary = request_summary(book)
-        except Exception as exc:
-            logger.exception("Summary generation failed for ISBN %s: %s", isbn, exc)
-            book.summary = ""
-        db.add(book)
-        db.commit()
-    finally:
-        db.close()

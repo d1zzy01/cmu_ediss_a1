@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 import logging
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import EmailStr
@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
-from app.llm import populate_book_summary
+from app.llm import request_summary
 from app.models import Book, Customer
 from app.schemas import BookCreate, BookUpdate, CustomerCreate
 
@@ -78,7 +78,7 @@ def status_check() -> str:
 @app.post("/books", status_code=status.HTTP_201_CREATED)
 def create_book(
     payload: BookCreate,
-    background_tasks: BackgroundTasks,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ):
@@ -100,6 +100,8 @@ def create_book(
             quantity=payload.quantity,
             summary="",
         )
+        # Generate the summary before saving so the created book is immediately complete in the database.
+        book.summary = request_summary(book)
         db.add(book)
         db.commit()
         db.refresh(book)
@@ -114,9 +116,7 @@ def create_book(
         logger.exception("Failed to create book %s: %s", payload.ISBN, exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # The summary is generated after the response so POST /books stays fast.
-    background_tasks.add_task(populate_book_summary, book.isbn)
-    response.headers["Location"] = f"/books/{book.isbn}"
+    response.headers["Location"] = f"{str(request.base_url).rstrip('/')}/books/{book.isbn}"
     body = serialize_book(book)
     body.pop("summary", None)
     return body
