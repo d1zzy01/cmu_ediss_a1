@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    database_url: str = "sqlite:///./app.db"
+    database_url: str = "sqlite:///./book_service.db"
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-3-flash-preview"
 

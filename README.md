@@ -1,45 +1,72 @@
-# Assignment 1 Bookstore Service
+# Assignment 1 Bookstore Microservices
 
-FastAPI service implementing the assignment endpoints for books, customers, and health monitoring.
+FastAPI services split into separate book and customer microservices, each with its own app package and container.
 
 ## Requirements
 
 - Python 3.11+
 - A MySQL database for submission or grading
-- Optional Gemini API key for background book summaries
+- Optional Gemini API key for book summaries
 
 ## Configuration
 
-Use environment variables:
+Use environment variables per service:
 
 - `DATABASE_URL`: SQLAlchemy connection string. Example:
   - `mysql+pymysql://USER:PASSWORD@HOST:3306/DBNAME`
-- `GEMINI_API_KEY`: optional Google AI Studio API key
-- `GEMINI_MODEL`: optional, defaults to `gemini-1.5-flash`
+- `GEMINI_API_KEY`: optional Google AI Studio API key for the book service
+- `GEMINI_MODEL`: optional, defaults to `gemini-3-flash-preview`
 
-If `DATABASE_URL` is omitted, the app falls back to local SQLite for development only.
+If `DATABASE_URL` is omitted, each service falls back to its own local SQLite database for development only.
 
-## Run locally
+## Run Locally
+
+### Book service
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
-uvicorn app.main:app --reload
+uvicorn services.book_service.app.main:app --reload --port 8001
+```
+
+### Customer service
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+uvicorn services.customer_service.app.main:app --reload --port 8002
 ```
 
 ## Docker
 
+### Start both services
+
 ```bash
-docker build -t a1-bookstore-service .
-docker run --rm -p 8000:8000 \
+docker compose up --build
+```
+
+### Build one service manually
+
+```bash
+docker build -f services/book_service/Dockerfile -t book-service .
+docker run --rm -p 8001:8001 \
   -e DATABASE_URL='mysql+pymysql://USER:PASSWORD@HOST:3306/DBNAME' \
   -e GEMINI_API_KEY='your-key' \
-  a1-bookstore-service
+  book-service
+```
+
+```bash
+docker build -f services/customer_service/Dockerfile -t customer-service .
+docker run --rm -p 8002:8002 \
+  -e DATABASE_URL='mysql+pymysql://USER:PASSWORD@HOST:3306/DBNAME' \
+  customer-service
 ```
 
 ## Notes
 
 - Database tables are created automatically at startup.
-- `POST /books` stores the book immediately, then generates the summary in a background task to keep request latency low.
+- Book endpoints exist only in the book service on port `8001`.
+- Customer endpoints exist only in the customer service on port `8002`.
 - The `summary` field is returned only from the `GET /books/...` endpoints.

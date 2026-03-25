@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  book-service:
+    build:
+      context: .
+      dockerfile: services/book_service/Dockerfile
+    environment:
+      DATABASE_URL: sqlite:///./book_service.db
+    ports:
+      - "8001:8001"
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: services/customer_service/Dockerfile
+    environment:
+      DATABASE_URL: sqlite:///./customer_service.db
+    ports:
+      - "8002:8002"

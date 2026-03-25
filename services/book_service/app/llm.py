@@ -4,8 +4,8 @@ import logging
 
 from google import genai
 
-from app.config import settings
-from app.models import Book
+from .config import settings
+from .models import Book
 
 logger = logging.getLogger(__name__)
 
