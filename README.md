@@ -1,6 +1,6 @@
 # Assignment 1 Bookstore Microservices
 
-FastAPI services split into separate book and customer microservices, each with its own app package and container.
+FastAPI services split into backend book and customer services, plus two BFF services for mobile and web clients.
 
 ## Requirements
 
@@ -16,6 +16,8 @@ Use environment variables per service:
   - `mysql+pymysql://USER:PASSWORD@HOST:3306/DBNAME`
 - `GEMINI_API_KEY`: optional Google AI Studio API key for the book service
 - `GEMINI_MODEL`: optional, defaults to `gemini-3-flash-preview`
+- `BOOK_SERVICE_URL`: upstream URL used by the BFFs, defaults to `http://book-service:8001`
+- `CUSTOMER_SERVICE_URL`: upstream URL used by the BFFs, defaults to `http://customer-service:8002`
 
 If `DATABASE_URL` is omitted, each service falls back to its own local SQLite database for development only.
 
@@ -37,6 +39,24 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
 uvicorn services.customer_service.app.main:app --reload --port 8002
+```
+
+### Mobile BFF
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+uvicorn services.mobile_bff.app.main:app --reload --port 9001
+```
+
+### Web BFF
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+uvicorn services.web_bff.app.main:app --reload --port 9002
 ```
 
 ## Docker
@@ -67,6 +87,14 @@ docker run --rm -p 8002:8002 \
 ## Notes
 
 - Database tables are created automatically at startup.
-- Book endpoints exist only in the book service on port `8001`.
-- Customer endpoints exist only in the customer service on port `8002`.
+- Book backend endpoints exist on port `8001`.
+- Customer backend endpoints exist on port `8002`.
+- Mobile BFF endpoints exist on port `9001`.
+- Web BFF endpoints exist on port `9002`.
+- Every BFF request requires an `Authorization: Bearer <jwt>` header.
+- A BFF token is accepted only when the decoded payload contains `sub` in `starlord|gamora|drax|rocket|groot`, `iss` equal to `cmu.edu`, and a future `exp` value.
+- Both BFFs proxy book and customer endpoints and both authenticate every request.
+- Only the mobile BFF rewrites responses.
+- `GET /books/{isbn}` and `GET /books/isbn/{isbn}` on the mobile BFF replace `"genre": "non-fiction"` with `"genre": 3`.
+- `GET /customers/{id}` and `GET /customers?userId=...` on the mobile BFF remove `address`, `address2`, `city`, `state`, and `zipcode`.
 - The `summary` field is returned only from the `GET /books/...` endpoints.
