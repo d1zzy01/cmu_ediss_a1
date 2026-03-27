@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 import httpx
 from fastapi import Depends, FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from .auth import validate_jwt_token
@@ -13,6 +14,11 @@ app = FastAPI(
     title="Web BFF Service",
     dependencies=[Depends(validate_jwt_token)],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, __: RequestValidationError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={})
 
 
 async def forward_request(
