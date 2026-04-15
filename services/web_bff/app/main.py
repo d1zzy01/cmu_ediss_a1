@@ -12,7 +12,6 @@ from .config import settings
 
 app = FastAPI(
     title="Web BFF Service",
-    dependencies=[Depends(validate_jwt_token)],
 )
 
 
@@ -38,7 +37,7 @@ async def status_check() -> str:
     return "OK"
 
 
-@app.post("/books")
+@app.post("/books", dependencies=[Depends(validate_jwt_token)])
 async def create_book(request: Request) -> Response:
     upstream = await forward_request(
         settings.book_service_url,
@@ -52,7 +51,7 @@ async def create_book(request: Request) -> Response:
     return response
 
 
-@app.put("/books/{isbn}")
+@app.put("/books/{isbn}", dependencies=[Depends(validate_jwt_token)])
 async def update_book(isbn: str, request: Request) -> Response:
     upstream = await forward_request(
         settings.book_service_url,
@@ -63,14 +62,14 @@ async def update_book(isbn: str, request: Request) -> Response:
     return JSONResponse(content=upstream.json(), status_code=upstream.status_code)
 
 
-@app.get("/books/isbn/{isbn}")
-@app.get("/books/{isbn}")
+@app.get("/books/isbn/{isbn}", dependencies=[Depends(validate_jwt_token)])
+@app.get("/books/{isbn}", dependencies=[Depends(validate_jwt_token)])
 async def get_book(isbn: str) -> Response:
     upstream = await forward_request(settings.book_service_url, "GET", f"/books/{isbn}")
     return JSONResponse(content=upstream.json(), status_code=upstream.status_code)
 
 
-@app.get("/books/{isbn}/related-books")
+@app.get("/books/{isbn}/related-books", dependencies=[Depends(validate_jwt_token)])
 async def get_related_books(isbn: str) -> Response:
     upstream = await forward_request(settings.book_service_url, "GET", f"/books/{isbn}/related-books")
     if not upstream.content:
@@ -78,7 +77,7 @@ async def get_related_books(isbn: str) -> Response:
     return JSONResponse(content=upstream.json(), status_code=upstream.status_code)
 
 
-@app.post("/customers")
+@app.post("/customers", dependencies=[Depends(validate_jwt_token)])
 async def create_customer(request: Request) -> Response:
     upstream = await forward_request(
         settings.customer_service_url,
@@ -92,7 +91,7 @@ async def create_customer(request: Request) -> Response:
     return response
 
 
-@app.get("/customers")
+@app.get("/customers", dependencies=[Depends(validate_jwt_token)])
 async def get_customer_by_user_id(request: Request) -> Response:
     upstream = await forward_request(
         settings.customer_service_url,
@@ -103,7 +102,7 @@ async def get_customer_by_user_id(request: Request) -> Response:
     return JSONResponse(content=upstream.json(), status_code=upstream.status_code)
 
 
-@app.get("/customers/{customer_id}")
+@app.get("/customers/{customer_id}", dependencies=[Depends(validate_jwt_token)])
 async def get_customer_by_id(customer_id: int) -> Response:
     upstream = await forward_request(settings.customer_service_url, "GET", f"/customers/{customer_id}")
     return JSONResponse(content=upstream.json(), status_code=upstream.status_code)
