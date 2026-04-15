@@ -1,1 +1,4 @@
-http://bookstore-dev-ExternalALB-1107629495.us-east-1.elb.amazonaws.com:80
+http://a1f27263fe7fe4dd8a7c9cb18e706dd9-593489300.us-east-1.elb.amazonaws.com:80
+http://ae0569897b76d4e14b49d2704a5932e1-2102944544.us-east-1.elb.amazonaws.com:80
+davidzhu
+davidapsc@gmail.com
