@@ -30,7 +30,7 @@ async def forward_request(
     params: Mapping[str, str] | None = None,
     json_body: dict | None = None,
 ) -> httpx.Response:
-    async with httpx.AsyncClient(base_url=base_url, timeout=10.0) as client:
+    async with httpx.AsyncClient(base_url=base_url, timeout=45.0) as client:
         return await client.request(method, path, params=params, json=json_body)
 
 

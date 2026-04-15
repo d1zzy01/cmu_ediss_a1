@@ -101,6 +101,9 @@ class RecommendationClient:
             )
 
         self._circuit_breaker_store.close()
+        if response.status_code == 204 or not response.content:
+            return []
+
         payload = response.json()
         if isinstance(payload, dict):
             payload = [payload]

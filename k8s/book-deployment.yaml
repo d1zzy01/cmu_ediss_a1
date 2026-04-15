@@ -25,6 +25,15 @@ spec:
           volumeMounts:
             - name: circuit-breaker-state
               mountPath: /app/circuit-breaker
+          env:
+            - name: RECOMMENDATION_SERVICE_URL
+              value: "http://34.195.107.7"
+            - name: RECOMMENDATION_TIMEOUT_SECONDS
+              value: "3.0"
+            - name: CIRCUIT_BREAKER_STATE_PATH
+              value: "/app/circuit-breaker/state.json"
+            - name: CIRCUIT_BREAKER_RESET_TIMEOUT_SECONDS
+              value: "60.0"
           livenessProbe:
             httpGet:
               path: /status
