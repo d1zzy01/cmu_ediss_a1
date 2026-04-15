@@ -10,8 +10,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
+from .events import CustomerEventPublisher
 from .models import Customer
 from .schemas import CustomerCreate
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,11 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="Customer Service",
     lifespan=lifespan,
+)
+
+event_publisher = CustomerEventPublisher(
+    brokers=settings.kafka_brokers,
+    topic=settings.kafka_topic,
 )
 
 
@@ -84,6 +91,8 @@ def create_customer(payload: CustomerCreate, response: Response, db: Session = D
         db.add(customer)
         db.commit()
         db.refresh(customer)
+        customer_payload = serialize_customer(customer)
+        event_publisher.publish_customer_registered(customer_payload)
     except IntegrityError:
         db.rollback()
         return JSONResponse(
@@ -94,9 +103,12 @@ def create_customer(payload: CustomerCreate, response: Response, db: Session = D
         db.rollback()
         logger.exception("Failed to create customer %s: %s", payload.userId, exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as exc:
+        logger.exception("Failed to publish customer registered event for %s: %s", payload.userId, exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     response.headers["Location"] = f"/customers/{customer.id}"
-    return serialize_customer(customer)
+    return customer_payload
 
 
 @app.get("/customers")

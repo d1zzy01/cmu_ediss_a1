@@ -86,6 +86,14 @@ async def get_book(isbn: str) -> Response:
     return JSONResponse(content=payload, status_code=upstream.status_code)
 
 
+@app.get("/books/{isbn}/related-books")
+async def get_related_books(isbn: str) -> Response:
+    upstream = await forward_request(settings.book_service_url, "GET", f"/books/{isbn}/related-books")
+    if not upstream.content:
+        return Response(status_code=upstream.status_code)
+    return JSONResponse(content=upstream.json(), status_code=upstream.status_code)
+
+
 @app.post("/customers")
 async def create_customer(request: Request) -> Response:
     upstream = await forward_request(

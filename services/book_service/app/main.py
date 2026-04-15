@@ -11,6 +11,14 @@ from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
 from .llm import request_summary
 from .models import Book
+from .recommendations import (
+    CircuitBreakerStateStore,
+    RecommendationCircuitOpenError,
+    RecommendationClient,
+    RecommendationServiceError,
+    RecommendationTimeoutError,
+)
+from .config import settings
 from .schemas import BookCreate, BookUpdate
 
 logger = logging.getLogger(__name__)
@@ -25,6 +33,15 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="Book Service",
     lifespan=lifespan,
+)
+
+recommendation_client = RecommendationClient(
+    base_url=settings.recommendation_service_url,
+    timeout_seconds=settings.recommendation_timeout_seconds,
+    circuit_breaker_store=CircuitBreakerStateStore(
+        settings.circuit_breaker_state_path,
+        settings.circuit_breaker_reset_timeout_seconds,
+    ),
 )
 
 
@@ -146,3 +163,28 @@ def get_book(isbn: str, db: Session = Depends(get_db)) -> dict:
         logger.exception("Failed to fetch book %s: %s", isbn, exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return serialize_book(book)
+
+
+@app.get("/books/{isbn}/related-books")
+def get_related_books(isbn: str):
+    try:
+        recommendations = recommendation_client.get_related_books(isbn)
+    except RecommendationTimeoutError:
+        return Response(status_code=status.HTTP_504_GATEWAY_TIMEOUT)
+    except RecommendationCircuitOpenError:
+        return Response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except RecommendationServiceError as exc:
+        logger.exception("Failed to fetch recommendations for %s: %s", isbn, exc)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY)
+
+    if not recommendations:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return [
+        {
+            "ISBN": recommendation.isbn,
+            "title": recommendation.title,
+            "Author": recommendation.authors,
+        }
+        for recommendation in recommendations
+    ]
